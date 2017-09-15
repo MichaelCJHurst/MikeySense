@@ -4,45 +4,50 @@
 Mikey Sense
 Like Spidey Senses, but with a pi
 """
+import os
 import time
 from sense_hat import SenseHat
 
-x = [255, 255, 255]
-O = [0, 0, 0]
-BLANK = [
-	O, O, O, O, O, O, O, O,
-	O, O, O, O, O, O, O, O,
-	O, O, O, O, O, O, O, O,
-	O, O, O, O, O, O, O, O,
-	O, O, O, O, O, O, O, O,
-	O, O, O, O, O, O, O, O,
-	O, O, O, O, O, O, O, O,
-	O, O, O, O, O, O, O, O
-]
-UNKNOWN = [
-	O, O, O, x, x, O, O, O,
-	O, O, x, O, O, x, O, O,
-	O, O, O, O, O, x, O, O,
-	O, O, O, O, x, O, O, O,
-	O, O, O, x, O, O, O, O,
-	O, O, O, x, O, O, O, O,
-	O, O, O, O, O, O, O, O,
-	O, O, O, x, O, O, O, O
-]
+def blank_grid():
+	""" Returns a blank grid """
+	O = [0, 0, 0]
+	return [
+		O, O, O, O, O, O, O, O,
+		O, O, O, O, O, O, O, O,
+		O, O, O, O, O, O, O, O,
+		O, O, O, O, O, O, O, O,
+		O, O, O, O, O, O, O, O,
+		O, O, O, O, O, O, O, O,
+		O, O, O, O, O, O, O, O,
+		O, O, O, O, O, O, O, O
+	]
+
+def unknown_grid():
+	""" Returns if the param is unknown """
+	return fill_blocks(blank_grid(), [11, 12, 18, 21, 29, 36, 44, 60])
+
+def cpu_temperature():
+	""" Return the CPU temp as a float """
+	result = os.popen("vcgencmd measure_temp").readline()
+	return float(result.replace("temp=","").replace("'C\n",""))
 
 def main():
 	""" Runs when run """
 	# Set the sense class up
 	sense = SenseHat()
+	sense.low_light = True
 	sense.clear()
 	# Say hello
-	# say_hello(sense)
+	say_hello(sense)
 	# Show the temperature
-	# show_temp(sense)
-
-	output_num(sense, 10)
-
-	time.sleep(5)
+	try:
+		while True:
+			show_temp(sense)
+			time.sleep(5)
+	except KeyboardInterrupt:
+		sense.clear()
+	except:
+		sense.clear()
 	sense.clear()
 
 def say_hello(sense):
@@ -54,164 +59,95 @@ def say_hello(sense):
 
 def show_temp(sense):
 	""" Shows the temperature """
-	# Get the temp, and intify it
-	temperature = int(sense.get_temperature())
-	output_num(sense, temperature)
+	# Get the temp
+	temperature = sense.get_temperature()
+	# Calibrate the temperature
+	cpu_temp = cpu_temperature()
+	temperature = int(temperature - ((cpu_temp - temperature)/5.466))
+	output_num(sense, int(temperature))
 
 def output_num(sense, num):
-	""" Outputs a number, scrolling if greater than 99, otherwise outputting it normally """
+	""" Outputs a number, scrolling if -100 <= x >= 100, otherwise outputting it normally """
 	sense.clear()
-	if num >= 100:
+	if num >= 100 or num <= -100:
 		sense.show_message(str(num))
-	elif num >= 10:
-		sense.set_pixels(draw_num(num))
 	else:
-		sense.set_pixels(draw_digit(num))
-	print(10)
-
-def draw_digit(num):
-	""" Outputs a number which is 0 >= x < 10 """
-	result = UNKNOWN
-	# If num is an int and less than 10, output it
-	if isinstance(num, int) and num >= 0 and num < 10:
-		#		-, X, X, X, X, -, X, 0
-		if num == 0:
-			result = [
-				O, O, O, O, O, O, O, O,
-				O, O, x, x, O, O, x, O,
-				O, x, O, O, x, O, O, O,
-				O, x, O, O, x, O, O, O,
-				O, x, O, O, x, O, O, O,
-				O, x, O, O, x, O, O, O,
-				O, O, x, x, O, O, O, O,
-				O, O, O, O, O, O, O, O
-			]
-		elif num == 1:
-			result = [
-				O, O, O, O, O, O, O, O,
-				O, O, x, x, O, O, x, O,
-				O, x, x, x, O, O, O, O,
-				O, O, x, x, O, O, O, O,
-				O, O, x, x, O, O, O, O,
-				O, O, x, x, O, O, O, O,
-				O, x, x, x, x, O, O, O,
-				O, O, O, O, O, O, O, O
-			]
-		elif num == 2:
-			result = [
-				O, O, O, O, O, O, O, O,
-				O, O, x, x, O, O, x, O,
-				O, x, O, O, x, O, O, O,
-				O, O, O, O, x, O, O, O,
-				O, O, O, x, O, O, O, O,
-				O, O, x, O, O, O, O, O,
-				O, x, x, x, x, O, O, O,
-				O, O, O, O, O, O, O, O
-			]
-		elif num == 3:
-			result = [
-				O, O, O, O, O, O, O, O,
-				O, x, x, x, x, O, x, O,
-				O, O, O, O, x, O, O, O,
-				O, O, x, x, O, O, O, O,
-				O, O, O, O, x, O, O, O,
-				O, x, O, O, x, O, O, O,
-				O, O, x, x, O, O, O, O,
-				O, O, O, O, O, O, O, O
-			]
-		elif num == 4:
-			result = [
-				O, O, O, O, O, O, O, O,
-				O, O, O, x, O, O, x, O,
-				O, O, x, x, O, O, O, O,
-				O, x, O, x, O, O, O, O,
-				O, x, x, x, x, O, O, O,
-				O, O, O, x, O, O, O, O,
-				O, O, O, x, O, O, O, O,
-				O, O, O, O, O, O, O, O
-			]
-		elif num == 5:
-			result = [
-				O, O, O, O, O, O, O, O,
-				O, x, x, x, x, O, x, O,
-				O, x, O, O, O, O, O, O,
-				O, x, x, x, O, O, O, O,
-				O, O, O, O, x, O, O, O,
-				O, x, O, O, x, O, O, O,
-				O, O, x, x, O, O, O, O,
-				O, O, O, O, O, O, O, O
-			]
-		elif num == 6:
-			result = [
-				O, O, O, O, O, O, O, O,
-				O, O, x, x, x, O, x, O,
-				O, x, O, O, O, O, O, O,
-				O, x, x, x, O, O, O, O,
-				O, x, O, O, x, O, O, O,
-				O, x, O, O, x, O, O, O,
-				O, O, x, x, O, O, O, O,
-				O, O, O, O, O, O, O, O
-			]
-		elif num == 7:
-			result = [
-				O, O, O, O, O, O, O, O,
-				O, x, x, x, x, O, x, O,
-				O, O, O, O, x, O, O, O,
-				O, O, O, O, x, O, O, O,
-				O, O, O, x, O, O, O, O,
-				O, O, x, O, O, O, O, O,
-				O, x, O, O, O, O, O, O,
-				O, O, O, O, O, O, O, O
-			]
-		elif num == 8:
-			result = [
-				O, O, O, O, O, O, O, O,
-				O, O, x, x, O, O, x, O,
-				O, x, O, O, x, O, O, O,
-				O, O, x, x, O, O, O, O,
-				O, x, O, O, x, O, O, O,
-				O, x, O, O, x, O, O, O,
-				O, O, x, x, O, O, O, O,
-				O, O, O, O, O, O, O, O
-			]
-		elif num == 9:
-			result = [
-				O, O, O, O, O, O, O, O,
-				O, O, x, x, O, O, x, O,
-				O, x, O, O, x, O, O, O,
-				O, x, O, O, x, O, O, O,
-				O, O, x, x, x, O, O, O,
-				O, O, O, O, x, O, O, O,
-				O, O, O, O, x, O, O, O,
-				O, O, O, O, O, O, O, O
-			]
-	# Returns UNKNOWN if num isn't valid
-	return result
-
-def draw_negative_digit(num):
-	""" Outputs a number which is 0 > x > -10 """
-	return UNKNOWN
+		sense.set_pixels(draw_num(num))
 
 def draw_num(num):
 	""" Outputs a number which is 10 >= x < 100 """
-	result = UNKNOWN
+	result = unknown_grid()
 	# if num is valid, output it
-	if isinstance(num, int) and num >= 10 and num < 100:
-		result = [
-			O, O, O, O, O, O, O, O,
-			O, O, O, O, O, O, O, O,
-			O, O, O, O, O, O, O, O,
-			O, O, O, O, O, O, O, O,
-			O, O, O, O, O, O, O, O,
-			O, O, O, O, O, O, O, O,
-			O, O, O, O, O, O, O, O,
-			O, O, O, O, O, O, O, O
-		]
+	if isinstance(num, int):
+		result = blank_grid()
+		# If negative, draw the '-', and then make it positive
+		if num < 0:
+			result = fill_blocks(result, [24], [255, 0, 0])
+			num = num * -1
+		# Draw the actual number
+		if num >= 10:
+			# Draw the tens
+			result = draw_tens(result, int(str(num)[0]))
+			# And the units
+			result = draw_units(result, int(str(num)[1]))
+		elif num < 10 and num >= 0:
+			# Draw just the units
+			result = draw_units(result, num)
 	return result
 
-def draw_negative_num(num):
-	""" Outputs a number which is -10 >= x > -100 """
-	return UNKNOWN
+def fill_blocks(blocks, nums, colour = [255, 255, 255]):
+	""" Fills the provided blocks """
+	for num in nums:
+		blocks[num] = colour
+	return blocks
+
+def draw_tens(light_grid, digit):
+	""" Outputs the tens of the number """
+	if isinstance(digit, int) and digit > 0 and digit < 10:
+		if digit == 1:
+			light_grid = fill_blocks(light_grid, [10, 17, 18, 26, 34, 42, 49, 50, 51])
+		elif digit == 2:
+			light_grid = fill_blocks(light_grid, [10, 17, 19, 27, 34, 41, 49, 50, 51])
+		elif digit == 3:
+			light_grid = fill_blocks(light_grid, [9, 10, 19, 25, 26, 35, 43, 49, 50])
+		elif digit == 4:
+			light_grid = fill_blocks(light_grid, [11, 18, 19, 25, 27, 33, 34, 35, 43, 51])
+		elif digit == 5:
+			light_grid = fill_blocks(light_grid, [9, 10, 11, 17, 25, 26, 35, 43, 49, 50])
+		elif digit == 6:
+			light_grid = fill_blocks(light_grid, [11, 10, 17, 25, 33, 41, 50, 43, 35, 26])
+		elif digit == 7:
+			light_grid = fill_blocks(light_grid, [9, 10, 11, 19, 27, 34, 42, 49])
+		elif digit == 8:
+			light_grid = fill_blocks(light_grid, [10, 17, 19, 26, 33, 35, 41, 43, 50])
+		elif digit == 9:
+			light_grid = fill_blocks(light_grid, [10, 11, 17, 19, 25, 27, 34, 35, 43, 51])
+	return light_grid
+
+def draw_units(light_grid, digit):
+	""" Outputs the digit of the number """
+	if isinstance(digit, int) and digit >= 0 and digit < 10:
+		if digit == 0:
+			light_grid = fill_blocks(light_grid, [14, 21, 23, 29, 31, 37, 39, 45, 47, 54])
+		elif digit == 1:
+			light_grid = fill_blocks(light_grid, [14, 21, 22, 30, 38, 46, 53, 54, 55])
+		elif digit == 2:
+			light_grid = fill_blocks(light_grid, [14, 21, 23, 31, 38, 45, 53, 54, 55])
+		elif digit == 3:
+			light_grid = fill_blocks(light_grid, [13, 14, 23, 29, 30, 39, 47, 53, 54])
+		elif digit == 4:
+			light_grid = fill_blocks(light_grid, [15, 22, 23, 29, 31, 37, 38, 39, 47, 55])
+		elif digit == 5:
+			light_grid = fill_blocks(light_grid, [13, 14, 15, 21, 29, 30, 39, 47, 53, 54])
+		elif digit == 6:
+			light_grid = fill_blocks(light_grid, [15, 14, 21, 29, 37, 45, 54, 47, 39, 30])
+		elif digit == 7:
+			light_grid = fill_blocks(light_grid, [13, 14, 15, 23, 31, 38, 46, 53])
+		elif digit == 8:
+			light_grid = fill_blocks(light_grid, [14, 21, 23, 30, 37, 39, 45, 47, 54])
+		elif digit == 9:
+			light_grid = fill_blocks(light_grid, [14, 15, 21, 23, 29, 31, 38, 39, 47, 55])
+	return light_grid
 
 if __name__ == "__main__":
 	main()
