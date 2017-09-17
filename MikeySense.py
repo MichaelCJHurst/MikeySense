@@ -6,20 +6,21 @@ Like Spidey Senses, but with a pi
 """
 import os
 import time
-from sense_hat import SenseHat
+from multiprocessing import Process, Value
+from sense_hat       import SenseHat
 
 def blank_grid():
 	""" Returns a blank grid """
-	O = [0, 0, 0]
+	blank = [0, 0, 0]
 	return [
-		O, O, O, O, O, O, O, O,
-		O, O, O, O, O, O, O, O,
-		O, O, O, O, O, O, O, O,
-		O, O, O, O, O, O, O, O,
-		O, O, O, O, O, O, O, O,
-		O, O, O, O, O, O, O, O,
-		O, O, O, O, O, O, O, O,
-		O, O, O, O, O, O, O, O
+		blank, blank, blank, blank, blank, blank, blank, blank,
+		blank, blank, blank, blank, blank, blank, blank, blank,
+		blank, blank, blank, blank, blank, blank, blank, blank,
+		blank, blank, blank, blank, blank, blank, blank, blank,
+		blank, blank, blank, blank, blank, blank, blank, blank,
+		blank, blank, blank, blank, blank, blank, blank, blank,
+		blank, blank, blank, blank, blank, blank, blank, blank,
+		blank, blank, blank, blank, blank, blank, blank, blank
 	]
 
 def unknown_grid():
@@ -38,17 +39,21 @@ def main():
 	sense.low_light = True
 	sense.clear()
 	# Say hello
-	say_hello(sense)
-	# Show the temperature
+	#say_hello(sense)
+	# Start the getting and outputing daemons
 	try:
-		while True:
-			show_temp(sense)
-			time.sleep(5)
+		sense_values = Value("i", 0)
+		get_sense_vars_process = Process(target=get_sense_vars, args=(sense, sense_values))
+		output_process         = Process(target=output,         args=(sense, sense_values))
+		get_sense_vars_process.daemon = True
+		output_process.daemon      = True
+		get_sense_vars_process.start()
+		output_process.start()
+		get_sense_vars_process.join()
+		output_process.join()
 	except KeyboardInterrupt:
-		sense.clear()
-	except:
-		sense.clear()
-	sense.clear()
+		print("Cancelled")
+	print("Program Finished")
 
 def say_hello(sense):
 	""" Says hello, and shows a smiley face """
@@ -57,18 +62,36 @@ def say_hello(sense):
 	sense.show_message(":)")
 	sense.set_rotation(0)
 
-def show_temp(sense):
-	""" Shows the temperature """
-	# Get the temp
-	temperature = sense.get_temperature()
-	# Calibrate the temperature
-	cpu_temp = cpu_temperature()
-	temperature = int(temperature - ((cpu_temp - temperature)/5.466))
-	output_num(sense, int(temperature))
+def output(sense, sense_values):
+	""" Outputs what needs to be output """
+	# Show the temperature
+	try:
+		while True:
+			output_num(sense, sense_values.value)
+			for event in sense.stick.get_events():
+				print(event.direction, event.action)
+	except KeyboardInterrupt:
+		sense.clear()
+	sense.clear()
+
+def get_sense_vars(sense, sense_values):
+	""" Sets the temperature every 5 seconds """
+	try:
+		while True:
+			# Get the temp
+			temperature = sense.get_temperature()
+			# Calibrate the temperature
+			cpu_temp = cpu_temperature()
+			temperature = int(temperature - ((cpu_temp - temperature)/5.466))
+			# set the temperature
+			sense_values.value = temperature
+			time.sleep(5)
+	except KeyboardInterrupt:
+		print("cancelled")
 
 def output_num(sense, num):
 	""" Outputs a number, scrolling if -100 <= x >= 100, otherwise outputting it normally """
-	sense.clear()
+	# sense.clear()
 	if num >= 100 or num <= -100:
 		sense.show_message(str(num))
 	else:
