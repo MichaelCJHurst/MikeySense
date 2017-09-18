@@ -8,6 +8,7 @@ import os
 import time
 from multiprocessing import Process, Value
 from sense_hat       import SenseHat
+from Classes.MikeySenseClock import MikeySenseClock
 
 def blank_grid():
 	""" Returns a blank grid """
@@ -39,7 +40,7 @@ def main():
 	sense.low_light = True
 	sense.clear()
 	# Say hello
-	#say_hello(sense)
+	say_hello(sense)
 	# Start the getting and outputing daemons
 	try:
 		sense_values = Value("i", 0)
@@ -54,6 +55,7 @@ def main():
 	except KeyboardInterrupt:
 		print("Cancelled")
 	print("Program Finished")
+	sense.clear()
 
 def say_hello(sense):
 	""" Says hello, and shows a smiley face """
@@ -64,12 +66,37 @@ def say_hello(sense):
 
 def output(sense, sense_values):
 	""" Outputs what needs to be output """
-	# Show the temperature
+	# Sets what each 'page' does
+	sense_page  = "time"
+	sense_pages = {
+		"left":   "weather",
+		"right":  "blank",
+		"up":     "time",
+		"down":   "temperature",
+		"middle": "????"
+	}
+	# Set the clock up
+	clock = MikeySenseClock()
+	# Show the pages
 	try:
 		while True:
-			output_num(sense, sense_values.value)
 			for event in sense.stick.get_events():
-				print(event.direction, event.action)
+				# If the page exists for this direction, change to it
+				if event.direction in sense_pages and sense_page != sense_pages[event.direction]:
+					sense_page = sense_pages[event.direction]
+					sense.show_message(sense_page.capitalize(), 0.05)
+			# Output the correct page
+			if sense_page == "weather":
+				sense.set_pixels(unknown_grid())
+			elif sense_page == "time":
+				clock.reset_time()
+				sense.set_pixels(clock.output_clock())
+			elif sense_page == "temperature":
+				output_num(sense, sense_values.value)
+			elif sense_page == "blank":
+				sense.clear()
+			else:
+				sense.set_pixels(unknown_grid())
 	except KeyboardInterrupt:
 		sense.clear()
 	sense.clear()
@@ -85,7 +112,7 @@ def get_sense_vars(sense, sense_values):
 			temperature = int(temperature - ((cpu_temp - temperature)/5.466))
 			# set the temperature
 			sense_values.value = temperature
-			time.sleep(5)
+			time.sleep(10)
 	except KeyboardInterrupt:
 		print("cancelled")
 
