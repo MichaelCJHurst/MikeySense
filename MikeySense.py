@@ -6,6 +6,7 @@ Like Spidey Senses, but with a pi
 """
 import os
 import time
+from configparser    import SafeConfigParser
 from multiprocessing import Process, Value
 from sense_hat       import SenseHat
 from Classes.MikeySenseClock import MikeySenseClock
@@ -32,6 +33,10 @@ def cpu_temperature():
 	""" Return the CPU temp as a float """
 	result = os.popen("vcgencmd measure_temp").readline()
 	return float(result.replace("temp=","").replace("'C\n",""))
+
+def generate_filepath(path):
+	""" Generates a direct path to files in this directory """
+	return os.path.join(os.path.abspath(os.path.dirname(__file__)), path)
 
 def main():
 	""" Runs when run """
@@ -63,6 +68,15 @@ def say_hello(sense):
 	sense.set_rotation(90)
 	sense.show_message(":)")
 	sense.set_rotation(0)
+
+def read_config():
+	""" Reads the config file """
+	parser = SafeConfigParser()
+	config = {}
+	parser.read(generate_filepath("MikeySense.ini"))
+	# pyowm stuff
+	config["pyowm_api_key"]  = parser.get("pyowm", "apiKey")
+	config["pyowm_location"] = parser.get("pyowm", "location")
 
 def output(sense, sense_values):
 	""" Outputs what needs to be output """
