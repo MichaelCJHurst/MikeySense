@@ -9,7 +9,8 @@ import time
 from configparser    import SafeConfigParser
 from multiprocessing import Process, Value
 from sense_hat       import SenseHat
-from Classes.MikeySenseClock import MikeySenseClock
+from Classes.MikeySenseClock   import MikeySenseClock
+from Classes.MikeySenseWeather import MikeySenseWeather
 
 def blank_grid():
 	""" Returns a blank grid """
@@ -38,19 +39,26 @@ def generate_filepath(path):
 	""" Generates a direct path to files in this directory """
 	return os.path.join(os.path.abspath(os.path.dirname(__file__)), path)
 
+def string_to_bool(test_string):
+	""" Changes a string value to a boolean """
+	return bool(test_string in ["True", "true", "Yes", "yes", "Y", "y"])
+
 def main():
 	""" Runs when run """
 	# Set the sense class up
 	sense = SenseHat()
 	sense.low_light = True
 	sense.clear()
-	# Say hello
-	say_hello(sense)
+	# Get the config
+	config = read_config()
+	# Say hello, if set to
+	if config["say_hello"] is True:
+		say_hello(sense)
 	# Start the getting and outputing daemons
 	try:
 		sense_values = Value("i", 0)
 		get_sense_vars_process = Process(target=get_sense_vars, args=(sense, sense_values))
-		output_process         = Process(target=output,         args=(sense, sense_values))
+		output_process         = Process(target=output,         args=(sense, sense_values, config))
 		get_sense_vars_process.daemon = True
 		output_process.daemon      = True
 		get_sense_vars_process.start()
@@ -74,14 +82,21 @@ def read_config():
 	parser = SafeConfigParser()
 	config = {}
 	parser.read(generate_filepath("MikeySense.ini"))
+	# main stuff
+	config["say_hello"]          = string_to_bool(parser.get("main", "sayHello"))
+	config["start_page"]         = parser.get("main", "startPage")
 	# pyowm stuff
-	config["pyowm_api_key"]  = parser.get("pyowm", "apiKey")
-	config["pyowm_location"] = parser.get("pyowm", "location")
+	config["pyowm_api_key"]      = parser.get("pyowm", "apiKey")
+	config["pyowm_location"]     = parser.get("pyowm", "location")
+	config["pyowm_update_every"] = parser.get("pyowm", "updateEvery")
+	# Return the config
+	return config
 
-def output(sense, sense_values):
+def output(sense, sense_values, config):
 	""" Outputs what needs to be output """
 	# Sets what each 'page' does
-	sense_page  = "time"
+	# sense_page  = "time"
+	sense_page = config["start_page"]
 	sense_pages = {
 		"left":   "weather",
 		"right":  "blank",
@@ -89,19 +104,27 @@ def output(sense, sense_values):
 		"down":   "temperature",
 		"middle": "????"
 	}
-	# Set the clock up
-	clock = MikeySenseClock()
+	sense_last_update = int(time.time())
+	sense_change      = True
+	# Set the clock and weather up
+	clock   = MikeySenseClock()
+	weather = MikeySenseWeather(config["pyowm_api_key"], config["pyowm_location"])
 	# Show the pages
 	try:
 		while True:
 			for event in sense.stick.get_events():
 				# If the page exists for this direction, change to it
 				if event.direction in sense_pages and sense_page != sense_pages[event.direction]:
-					sense_page = sense_pages[event.direction]
+					sense_page   = sense_pages[event.direction]
+					sense_change = True
 					sense.show_message(sense_page.capitalize(), 0.05)
 			# Output the correct page
 			if sense_page == "weather":
-				sense.set_pixels(unknown_grid())
+				if sense_change is True or change_time(sense_last_update, 1) is True:
+					sense_change = False
+					sense_last_update = int(time.time())
+					sense.load_image(weather.current_weather())
+					# sense.load_image(generate_filepath("WeatherIcons/mist.png"))
 			elif sense_page == "time":
 				clock.reset_time()
 				sense.set_pixels(clock.output_clock())
@@ -114,6 +137,11 @@ def output(sense, sense_values):
 	except KeyboardInterrupt:
 		sense.clear()
 	sense.clear()
+
+def change_time(current_time, change_mins):
+	""" Returns whether enough time has elapsed to update the display """
+	now = int(time.time())
+	return bool(current_time + (change_mins * 60) < now)
 
 def get_sense_vars(sense, sense_values):
 	""" Sets the temperature every 5 seconds """
