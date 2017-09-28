@@ -25,7 +25,7 @@ def blank_grid():
 	]
 
 def unknown_grid():
-	""" Returns if the param is unknown """
+	""" Returns a large '?' """
 	return fill_blocks(blank_grid(), [11, 12, 18, 21, 29, 36, 44, 60])
 
 def cpu_temperature():
