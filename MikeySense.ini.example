@@ -1,6 +1,0 @@
-[main]
-sayHello    = true
-startPage   = time
-[pyowm]
-apiKey   = REQUIRED
-location = Luton,uk

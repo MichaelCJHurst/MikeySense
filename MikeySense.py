@@ -81,7 +81,7 @@ def read_config():
 	""" Reads the config file """
 	parser = SafeConfigParser()
 	config = {}
-	parser.read(generate_filepath("MikeySense.ini"))
+	parser.read(generate_filepath("Config/MikeySense.ini"))
 	# main stuff
 	config["say_hello"]          = string_to_bool(parser.get("main", "sayHello"))
 	config["start_page"]         = parser.get("main", "startPage")

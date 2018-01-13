@@ -1,0 +1,7 @@
+[main]
+sayHello    = true
+startPage   = time
+[pyowm]
+apiKey      = REQUIRED
+location    = London,uk
+updateEvery = 60

@@ -101,4 +101,4 @@ ENV/
 .mypy_cache/
 
 # Config file
-MikeySense.ini
+Config/MikeySense.ini
