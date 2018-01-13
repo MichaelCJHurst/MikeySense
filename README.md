@@ -1,11 +1,11 @@
 # MikeySense
+
 Python code for the Sense Hat for Raspberry Pis
 
-# Requirements
-- SenseHat library
-	- sudo apt-get install sense-hat
-- pip3
-	- sudo apt-get install python-pip3
-- pyowm (for the weather)
-	- https://github.com/csparpa/pyowm
-	- sudo pip3 install pyowm
+## Uses
+
+This uses pyowm (<https://github.com/csparpa/pyowm>) as a wrapper for OpenWeatherMap (<https://openweathermap.org/>)
+
+## Installation
+
+Just run /install.py, with sudo privilieges. As this is for the Sense hat, it goes without saying that this requires the Sense hat.
